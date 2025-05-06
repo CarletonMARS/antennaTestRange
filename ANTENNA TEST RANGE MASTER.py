@@ -287,8 +287,6 @@ class SFP(ctk.CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.connect()
 
-
-
     def start_gui(self):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
