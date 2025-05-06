@@ -16,17 +16,17 @@ from datetime import datetime
 import sys
 import os
 import threading
-
+from interfaces.serial_interface import SerialController
 class manual_control_App(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__()
+        self.ctrl = None
         self.attributes("-fullscreen", True)
         self.attributes("-topmost", True)
         self.lift()
         self.after(10, lambda: self.focus_force())
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
-
         self.geometry("3440x1440")
         self.title("POSITIONER MANUAL CONTROL")
 
@@ -121,7 +121,7 @@ class manual_control_App(ctk.CTkToplevel):
         self.HomeA_button.grid(row=4, column=3, pady=10, padx=10)
 
         # Home All
-        self.HomeALL_button = ctk.CTkButton(self, text="Home All", command=self.homeALL)
+        self.HomeALL_button = ctk.CTkButton(self, text="Home All", command=self.home)
         self.HomeALL_button.grid(row=4, column=4, pady=10, padx=10)
 
         #Goto 000
@@ -136,32 +136,14 @@ class manual_control_App(ctk.CTkToplevel):
         self.textbox = ctk.CTkTextbox(self, height=100, width=1500, wrap="word")
         self.textbox.grid(row=5, column=4, padx=10, pady=10)
 
-
-
-
-
-
-
     def connect_to_controller(self):
+        self.ctrl = SerialController(settings.COM_PORT, settings.BAUD_RATE)
         try:
-            self.serial_connection = serial.Serial(settings.COM_PORT, settings.BAUD_RATE, timeout=2)
-            time.sleep(0.5)
-            self.serial_connection.write(b'?')
-            response = self.serial_connection.readline().decode('utf-8').strip()
-
-            if response.startswith('<Idle|WPos:'):
-                values = response.split(':')[1].split(',')
-                if len(values) == 6:
-                    x, y, z, a, b, c = values
-                    self.update_textbox(f"Connected. Position at connection time is X{x} Y{y} A{a}\n")
-                    self.connect_button.configure(text='Connected', state=tk.DISABLED)
-
-                else:
-                    self.update_textbox("Invalid response format.")
-            else:
-                self.update_textbox("Failed to connect: Invalid response.")
-        except serial.SerialException as e:
-            self.update_textbox(f"Failed to connect: {str(e)}")
+            x,y,z,a,b,c = self.ctrl.query_position()
+            self.update_textbox(f"Connected. Position at connection time is X{x} Y{y} A{a}\n")
+            self.connect_button.configure(text='Connected', state=tk.DISABLED)
+        except Exception as e:
+            self.update_textbox(f"Failed to connect: {e}")
 
     def update_textbox(self, text):
         """Updates the textbox with new text."""
@@ -169,194 +151,129 @@ class manual_control_App(ctk.CTkToplevel):
         self.textbox.insert("end", text)  # Insert new text
 
     def xminus10(self):
-        position = self.get_position()
-        x = position[0] - 10.0
-        y = position[1]
-        z = position[2]
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(-10,0)
 
     def xminus1(self):
-        position = self.get_position()
-        x = position[0] - 1.0
-        y = position[1]
-        z = position[2]
-
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(-1,0)
 
     def xminus0p1(self):
-        position = self.get_position()
-        x = position[0] - 0.1
-        y = position[1]
-        z = position[2]
-
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(-0.1,0)
 
     def xminus0p02(self):
-        position = self.get_position()
-        x = position[0] - 0.02
-        y = position[1]
-        z = position[2]
+        self.move_and_refresh(-0.02,0)
 
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
 
     def xplus0p02(self):
-        position = self.get_position()
-        x = position[0] + 0.02
-        y = position[1]
-        z = position[2]
+        self.move_and_refresh(0.02,0)
 
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
 
     def xplus0p1(self):
-        position = self.get_position()
-        x = position[0] + 0.1
-        y = position[1]
-        z = position[2]
-
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(0.1,0)
 
     def xplus1(self):
-        position = self.get_position()
-        x = position[0] + 1.0
-        y = position[1]
-        z = position[2]
-
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(1,0)
 
     def xplus10(self):
-        position = self.get_position()
-        x = position[0] + 10.0
-        y = position[1]
-        z = position[2]
+        self.move_and_refresh(10,0)
 
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
 
     def yminus10(self):
-        position = self.get_position()
-        x = position[0]
-        y = position[1] -10.0
-        z = position[2]
+        self.move_and_refresh(0,-10)
 
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
 
     def yminus1(self):
-        position = self.get_position()
-        x = position[0]
-        y = position[1] - 1.0
-        z = position[2]
-
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(0,-1)
 
     def yminus0p1(self):
-        position = self.get_position()
-        x = position[0]
-        y = position[1] -0.1
-        z = position[2]
-
-
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(0,-0.1)
 
     def yminus0p02(self):
-        position = self.get_position()
-        x = position[0]
-        y = position[1] - 0.02
-        z = position[2]
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(0,-0.02)
 
     def yplus0p02(self):
-        position = self.get_position()
-        x = position[0]
-        y = position[1] + 0.02
-        z = position[2]
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(0, 0.02)
 
     def yplus0p1(self):
-        position = self.get_position()
-        x = position[0]
-        y = position[1] + 0.1
-        z = position[2]
-
-        print(x, y, z)
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(0, 0.1)
 
     def yplus1(self):
-        position = self.get_position()
-        x = position[0]
-        y = position[1] + 1.0
-        z = position[2]
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(0, 1)
 
     def yplus10(self):
-        position = self.get_position()
-        x = position[0]
-        y = position[1] + 10.0
-        z = position[2]
-
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0 A0\n'.encode('utf-8'))  # Include default Z value
+        self.move_and_refresh(0, 10)
 
     def homex(self):
-        self.serial_connection.write(('$HX\n').encode('utf-8'))
+        self.ctrl.home_x()
+        self.refresh(45)
 
     def homey(self):
-        self.serial_connection.write(('$HY\n').encode('utf-8'))
+        self.ctrl.home_y()
+        self.refresh(45)
 
     def homea(self):
-        self.serial_connection.write(('$HA\n').encode('utf-8'))
+        self.ctrl.home_a()
+        self.refresh(45)
 
-    def homeALL(self):
-        self.serial_connection.write(('$H\n').encode('utf-8'))
+    def home(self):
+        self.ctrl.home_xya()
+        self.refresh(45)
 
     def goto0(self):
-
-        self.serial_connection.write(('X0 Y0 Z0 A0\n').encode('utf-8'))
+        self.zero_and_refresh()
 
     def get_position(self):
+        # try:
+        #     self.serial_connection.flushInput()
+        #     self.serial_connection.write(('?').encode('utf-8'))
+        #     time.sleep(0.1)
+        #     response = self.serial_connection.readline().decode('utf-8').strip()
+        #
+        #     if '<Idle|WPos:' in response:
+        #         try:
+        #             values = response.split('|')[1].split(':')[1].split(',')
+        #             x, y, z, a = float(values[0]), float(values[1]), float(values[2]), float(values[3])
+        #             self.update_textbox(f"Current Position: X{x} Y{y} A{a}")
+        #             return float(x), float(y), float(a)
+        #         except (IndexError, ValueError):
+        #             self.update_textbox("Invalid response format for position.")
+        #             return None, None, None
+        #     else:
+        #         self.update_textbox("Failed. Was the RESULTS file opened?")
+        #         return None, None, None
+        # except serial.SerialException as e:
+        #     self.update_textbox(f"Error in getting position: {str(e)}")
+        #     return None, None, None
         try:
-            self.serial_connection.flushInput()
-            self.serial_connection.write(('?').encode('utf-8'))
-            time.sleep(0.1)
-            response = self.serial_connection.readline().decode('utf-8').strip()
-
-            if '<Idle|WPos:' in response:
-                try:
-                    values = response.split('|')[1].split(':')[1].split(',')
-                    x, y, z, a = float(values[0]), float(values[1]), float(values[2]), float(values[3])
-                    self.update_textbox(f"Current Position: X{x} Y{y} A{a}")
-                    return float(x), float(y), float(a)
-                except (IndexError, ValueError):
-                    self.update_textbox("Invalid response format for position.")
-                    return None, None, None
-            else:
-                self.update_textbox("Failed. Was the RESULTS file opened?")
-                return None, None, None
-        except serial.SerialException as e:
+            x, y, z, a, *_ = self.ctrl.query_position()
+            self.update_textbox(f"Current Position: X{x} Y{y} A{a}")
+            return x, y, z, a
+        except Exception as e:
             self.update_textbox(f"Error in getting position: {str(e)}")
-            return None, None, None
+            return None, None, None, None
+
+    def refresh(self, timeout=10):
+        try:
+            self.ctrl.wait_for_idle(timeout)
+        except RuntimeError as e:
+            return self.update_textbox(f"Move timeout: {e}")
+        x1, y1, *_ = self.ctrl.query_position()
+        self.update_textbox(f"Current Position: X{x1} Y{y1} A0")
+
+    def move_and_refresh(self, dx, dy):
+        x0, y0, *_ = self.ctrl.query_position()
+        target_x = x0 + dx
+        target_y = y0 + dy
+        self.ctrl.move_to(target_x, target_y)
+        self.refresh()
+
+    def zero_and_refresh(self):
+
+        self.ctrl.move_to(0, 0)
+        self.refresh()
+
 
     def close(self):
+        self.ctrl.close()
         self.destroy()
 
 class SFP(ctk.CTkToplevel):
