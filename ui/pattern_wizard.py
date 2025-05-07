@@ -1,7 +1,18 @@
-class threeDpat(ctk.CTkToplevel):
+import customtkinter as ctk
+import time
+import threading
+import numpy as np
+import csv
+from interfaces.serial_interface import SerialController
+from interfaces.vna_interface import VNAController
 
-    def __init__(self, parent):
-        super().__init__()
+class PatternWizard(ctk.CTkToplevel):
+    def __init__(self, parent, vna_ctrl: VNAController, serial_ctrl: SerialController):
+        super().__init__(parent)
+        self.vna_ctrl = vna_ctrl
+        self.serial_ctrl = serial_ctrl
+
+
 
         self.theta = None
         self.phi = None
@@ -196,8 +207,6 @@ class threeDpat(ctk.CTkToplevel):
         # time.sleep(3)
     def begin(self):
         self.read_steps()
-        self.connect_to_controller()
-        self.connect_to_vna()
         time.sleep(0.1)
         file_name = self.path
 
@@ -240,71 +249,62 @@ class threeDpat(ctk.CTkToplevel):
     def VNAquery(self, msg):
         return self.VNA.query(str(msg) + "?")
 
-    def connect_to_controller(self):
-        try:
+    # def connect_to_controller(self):
+    #     try:
+    #
+    #         self.serial_connection = serial.Serial(settings.COM_PORT, settings.BAUD_RATE, timeout=2)
+    #         time.sleep(0.5)
+    #         self.serial_connection.write(b'?')
+    #         response = self.serial_connection.readline().decode('utf-8').strip()
+    #
+    #         if response.startswith('<Idle|WPos:'):
+    #             values = response.split(':')[1].split(',')
+    #             if len(values) == 6:
+    #                 x, y, z, a, b, c = values
+    #                 self.update_textbox(f"Connected. Position at connection time is X{x} Y{y} A{a}\n")
+    #                 #self.connect_button.configure(text='Connected', state=tk.DISABLED)
+    #
+    #             else:
+    #                 self.update_textbox("Invalid response format.")
+    #         else:
+    #             self.update_textbox("Failed to connect: Invalid response.")
+    #     except serial.SerialException as e:
+    #         self.update_textbox(f"Failed to connect: {str(e)}")
+    #
+    # def connect_to_vna(self):
+    #     try:
+    #         self.rm = pyvisa.ResourceManager()
+    #         self.VNA = self.rm.open_resource("GPIB0::16::INSTR")
+    #         self.update_textbox(self.VNA.query("*IDN?"))
+    #     except pyvisa.VisaIOError:
+    #         self.update_textbox("FAILED TO CONNECT TO VNA")
+    #
+    # def initialize_vna(self):
+    #     self.VNA.write("S21")
+    #     time.sleep(0.5)
+    #     self.VNA.write("STAR " + str(self.start) + "GHZ")
+    #     time.sleep(0.5)
+    #     self.VNA.write("STOP " + str(self.stop) + "GHZ")
+    #     time.sleep(0.5)
+    #     self.VNA.write("STPSIZE " + str(self.step) + "HZ")
+    #     time.sleep(0.5)
+    #     self.VNA.write("IFBW "+ str(self.IFB_result) +"HZ")
+    #     time.sleep(0.5)
 
-            self.serial_connection = serial.Serial(settings.COM_PORT, settings.BAUD_RATE, timeout=2)
-            time.sleep(0.5)
-            self.serial_connection.write(b'?')
-            response = self.serial_connection.readline().decode('utf-8').strip()
-
-            if response.startswith('<Idle|WPos:'):
-                values = response.split(':')[1].split(',')
-                if len(values) == 6:
-                    x, y, z, a, b, c = values
-                    self.update_textbox(f"Connected. Position at connection time is X{x} Y{y} A{a}\n")
-                    #self.connect_button.configure(text='Connected', state=tk.DISABLED)
-
-                else:
-                    self.update_textbox("Invalid response format.")
-            else:
-                self.update_textbox("Failed to connect: Invalid response.")
-        except serial.SerialException as e:
-            self.update_textbox(f"Failed to connect: {str(e)}")
-
-    def connect_to_vna(self):
-        try:
-            self.rm = pyvisa.ResourceManager()
-            self.VNA = self.rm.open_resource("GPIB0::16::INSTR")
-            self.update_textbox(self.VNA.query("*IDN?"))
-        except pyvisa.VisaIOError:
-            self.update_textbox("FAILED TO CONNECT TO VNA")
-
-    def initialize_vna(self):
-        self.VNA.write("S21")
-        time.sleep(0.5)
-        self.VNA.write("STAR " + str(self.start) + "GHZ")
-        time.sleep(0.5)
-        self.VNA.write("STOP " + str(self.stop) + "GHZ")
-        time.sleep(0.5)
-        self.VNA.write("STPSIZE " + str(self.step) + "HZ")
-        time.sleep(0.5)
-        self.VNA.write("IFBW "+ str(self.IFB_result) +"HZ")
-        time.sleep(0.5)
-
-    def move_to_position(self, x, y):
-        self.serial_connection.write(f'G0 X{x} Y{y} Z0\n'.encode('utf-8'))  # Include default Z value
-
-
-
-
+    # def move_to_position(self, x, y):
+    #     self.serial_connection.write(f'G0 X{x} Y{y} Z0\n'.encode('utf-8'))  # Include default Z value
+    #
+    #
+    #
+    #
     def home(self):
-        self.serial_connection.write(('$H\n').encode('utf-8'))
+        self.serial_ctrl.home_xya()
 
     def kill(self):
-        self.serial_connection.close()
-        self.VNA.close()
         self.update_textbox("PROCESS PANIC ABORTED")
         self.kill_task.set()
 
     def on_close(self):
-        if self.serial_connection and self.serial_connection.is_open:
-            self.serial_connection.close()
-            print("Serial connection closed.")
-        if self.VNA:
-            self.VNA.close()
-            print("VNA disconnected")
-
         self.destroy()
 
     def update_textbox(self, text):
@@ -367,25 +367,25 @@ class threeDpat(ctk.CTkToplevel):
             )  # Split each string and get only the first value as a float number
         return np.asarray(aux)
 
-    def get_position(self):
-        try:
-            self.serial_connection.flushInput()
-            self.serial_connection.write(('?').encode('utf-8'))
-            time.sleep(0.1)
-            response = self.serial_connection.readline().decode('utf-8').strip()
-
-            if '<Idle|WPos:' in response:
-                try:
-                    values = response.split('|')[1].split(':')[1].split(',')
-                    x, y, z, a = float(values[0]), float(values[1]), float(values[2]), float(values[3])
-                    self.update_textbox(f"Current Position: X{x} Y{y} A{a}")
-                    return float(x), float(y), float(a)
-                except (IndexError, ValueError):
-                    self.update_textbox("Invalid response format for position.")
-                    return None, None, None
-            else:
-                self.update_textbox("Failed. Was the RESULTS file opened?")
-                return None, None, None
-        except serial.SerialException as e:
-            self.update_textbox(f"Error in getting position: {str(e)}")
-            return None, None, None
+    # def get_position(self):
+    #     try:
+    #         self.serial_connection.flushInput()
+    #         self.serial_connection.write(('?').encode('utf-8'))
+    #         time.sleep(0.1)
+    #         response = self.serial_connection.readline().decode('utf-8').strip()
+    #
+    #         if '<Idle|WPos:' in response:
+    #             try:
+    #                 values = response.split('|')[1].split(':')[1].split(',')
+    #                 x, y, z, a = float(values[0]), float(values[1]), float(values[2]), float(values[3])
+    #                 self.update_textbox(f"Current Position: X{x} Y{y} A{a}")
+    #                 return float(x), float(y), float(a)
+    #             except (IndexError, ValueError):
+    #                 self.update_textbox("Invalid response format for position.")
+    #                 return None, None, None
+    #         else:
+    #             self.update_textbox("Failed. Was the RESULTS file opened?")
+    #             return None, None, None
+    #     except serial.SerialException as e:
+    #         self.update_textbox(f"Error in getting position: {str(e)}")
+    #         return None, None, None

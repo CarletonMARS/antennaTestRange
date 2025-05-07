@@ -4,9 +4,10 @@ from interfaces.serial_interface import SerialController
 import settings
 
 class ManualControlWindow(ctk.CTkToplevel):
-    def __init__(self, parent):
-        super().__init__()
-        self.ctrl = None
+    def __init__(self, parent, serial_ctrl: SerialController):
+        self.connected=False
+        super().__init__(parent)
+        self.ctrl = serial_ctrl
         self.attributes("-fullscreen", True)
         self.attributes("-topmost", True)
         self.lift()
@@ -22,11 +23,6 @@ class ManualControlWindow(ctk.CTkToplevel):
         self.ctk_image = ctk.CTkImage(light_image=image, size=(200, 200))
         self.label = ctk.CTkLabel(self, image=self.ctk_image, text="")
         self.label.grid(row=0, column=4, padx=10, pady=10)
-
-        #CONNECT
-        self.connect_button = ctk.CTkButton(self, text="connect", command=self.connect_to_controller)
-        self.connect_button.grid(row=1, column=4, pady=10, padx=10)
-
         #X -10
         self.xminus10_button = ctk.CTkButton(self, text="X -10", command=self.xminus10)
         self.xminus10_button.grid(row=2, column=0, pady=10, padx=10)
@@ -123,11 +119,10 @@ class ManualControlWindow(ctk.CTkToplevel):
         self.textbox.grid(row=5, column=4, padx=10, pady=10)
 
     def connect_to_controller(self):
-        self.ctrl = SerialController(settings.COM_PORT, settings.BAUD_RATE)
         try:
             x,y,z,a,b,c = self.ctrl.query_position()
             self.update_textbox(f"Connected. Position at connection time is X{x} Y{y} A{a}\n")
-            self.connect_button.configure(text='Connected', state=ctk.DISABLED)
+            self.connected = True
         except Exception as e:
             self.update_textbox(f"Failed to connect: {e}")
 
@@ -208,27 +203,7 @@ class ManualControlWindow(ctk.CTkToplevel):
         self.zero_and_refresh()
 
     def get_position(self):
-        # try:
-        #     self.serial_connection.flushInput()
-        #     self.serial_connection.write(('?').encode('utf-8'))
-        #     time.sleep(0.1)
-        #     response = self.serial_connection.readline().decode('utf-8').strip()
-        #
-        #     if '<Idle|WPos:' in response:
-        #         try:
-        #             values = response.split('|')[1].split(':')[1].split(',')
-        #             x, y, z, a = float(values[0]), float(values[1]), float(values[2]), float(values[3])
-        #             self.update_textbox(f"Current Position: X{x} Y{y} A{a}")
-        #             return float(x), float(y), float(a)
-        #         except (IndexError, ValueError):
-        #             self.update_textbox("Invalid response format for position.")
-        #             return None, None, None
-        #     else:
-        #         self.update_textbox("Failed. Was the RESULTS file opened?")
-        #         return None, None, None
-        # except serial.SerialException as e:
-        #     self.update_textbox(f"Error in getting position: {str(e)}")
-        #     return None, None, None
+
         try:
             x, y, z, a, *_ = self.ctrl.query_position()
             self.update_textbox(f"Current Position: X{x} Y{y} A{a}")
@@ -259,5 +234,5 @@ class ManualControlWindow(ctk.CTkToplevel):
 
 
     def close(self):
-        self.ctrl.close()
+
         self.destroy()
