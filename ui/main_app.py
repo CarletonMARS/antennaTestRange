@@ -1,7 +1,7 @@
+import sys
+
 import customtkinter as ctk
 from PIL import Image
-from setuptools.logging import configure
-
 import settings
 from ui.manual_control import ManualControlWindow
 from ui.pattern_wizard import PatternWizard
@@ -108,8 +108,11 @@ class MainApp(ctk.CTk):
         self.textbox.delete("1.0", "end")  # Clear previous text
         self.textbox.insert("end", text)  # Insert new text
 
-    # def three_d_spherical_pattern(self):
-    #     threeD = threeDpat(self)
-
     def close(self):
+        """Closes interface connections and program"""
+        if self.vna_ctrl:
+            self.vna_ctrl.close()
+        if self.serial_ctrl:
+            self.serial_ctrl.close()
         self.destroy()
+        sys.exit(0)
