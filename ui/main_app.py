@@ -19,7 +19,7 @@ class MainApp(ctk.CTk):
         self.attributes('-fullscreen', True)
 
         # BANNER IMAGE
-        image_path = "Carleton_Logo.png"
+        image_path = "images/Carleton_Logo.png"
         image = Image.open(image_path)
         self.ctk_image = ctk.CTkImage(light_image=image, size=(300, 200))
         self.banner = ctk.CTkLabel(self, image=self.ctk_image, text="")

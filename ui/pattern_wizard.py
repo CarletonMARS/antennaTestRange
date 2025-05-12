@@ -175,18 +175,18 @@ class PatternWizard(ctk.CTkToplevel):
 
                     # Use first frequency's magnitude for 3D plotting
                     self.update_3d_plot(theta, phi, mags[0])
-                    self.save_csv(self.csv_path)
+                    self.save_csv(f"csv/{self.csv_path}")
                 except Exception as e:
                     return self.safe_gui_update(self.label, text=f"VNA error: {e}")
 
-        self.save_csv(self.csv_path)
+        self.save_csv(f"csv/{self.csv_path}")
         if not self.abort_flag.is_set():
             self.safe_gui_update(self.label, text="Scan complete. Results saved.")
         else:
             self.safe_gui_update(self.label, text="Scan aborted.")
         self.safe_gui_update(self.start_btn, state="normal")
 
-    def save_csv(self, filename="scan_results.csv"):
+    def save_csv(self, filename="csv/scan_results.csv"):
         import csv
         with open(filename, mode="w", newline="") as file:
             writer = csv.writer(file)

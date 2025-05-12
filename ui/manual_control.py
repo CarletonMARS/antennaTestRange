@@ -19,7 +19,7 @@ class ManualControlWindow(ctk.CTkToplevel):
         self.title("POSITIONER MANUAL CONTROL")
 
         # BANNER IMAGE
-        image_path = "DUO5.png"
+        image_path = "images/DUO5.png"
         image = Image.open(image_path)
         self.ctk_image = ctk.CTkImage(light_image=image, size=(200, 200))
         self.label = ctk.CTkLabel(self, image=self.ctk_image, text="")
