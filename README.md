@@ -8,11 +8,11 @@ This GUI-driven application allows users to configure, initiate, monitor, and st
 
 ## Features
 
--  **Automated Spherical Scanning** — Full 3D theta/phi sweep with VNA integration  
--  **Live 3D Radiation Plot** — Realtime `matplotlib`-based spherical pattern preview  
--  **Abort Functionality** — Safely stop measurements at any time  
--  **CSV Export** — Automatic saving of data in standard format  
--  **GUI Interface** — Intuitive controls built with `customtkinter`
+-  **Automated Spherical Scanning** -> Full 3D theta/phi sweep with VNA integration  
+-  **Live 3D Radiation Plot** -> Realtime `matplotlib`-based spherical pattern preview  
+-  **Abort Functionality** -> Safely stop measurements at any time  
+-  **CSV Export** -> Automatic saving of data in standard format  
+-  **GUI Interface** -> Intuitive controls built with `customtkinter`
 
 ---
 
