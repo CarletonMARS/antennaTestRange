@@ -19,7 +19,6 @@ class VNAFrontPanel(ctk.CTkToplevel):
         self.attributes("-topmost", True)
         self.title("AGILENT 8722ES SOFT FRONT PANEL")
 
-
         # Measurement Selection
         for i, name in enumerate(("S11", "S12", "S21", "S22")):
             btn = ctk.CTkButton(self, text=name, command=lambda n=name: self.select_sparam(n))
@@ -44,7 +43,6 @@ class VNAFrontPanel(ctk.CTkToplevel):
         # Close button
         self.close_btn = ctk.CTkButton(self, text="close", command=self.on_close)
         self.close_btn.grid(row=4, column=0, padx=10, pady=10)
-
 
     def select_sparam(self, sparam: str):
         self.vna_ctrl.select_sparam(sparam)

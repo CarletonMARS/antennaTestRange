@@ -1,6 +1,7 @@
 import serial
 import time
 
+
 class SerialController:
     def __init__(self, port, baud):
         self.conn = serial.Serial(port, baud, timeout=2)
@@ -32,11 +33,11 @@ class SerialController:
 
         raise RuntimeError(f"No position data in response: {raw}")
 
-    def move_to(self, x, y, z=0, a=0,):
+    def move_to(self, x, y, z=0, a=0, ):
         cmd = f"G0 X{x} Y{y} Z{z} A{a}\n"
         self.conn.write(cmd.encode('utf-8'))
 
-    def wait_for_idle(self, timeout = 5, poll_interval=0.05):
+    def wait_for_idle(self, timeout=5, poll_interval=0.05):
         start = time.time()
 
         while True:
@@ -54,7 +55,6 @@ class SerialController:
             if time.time() - start > timeout:
                 raise RuntimeError("Timeout waiting for Idle")
 
-
     def home_x(self):
         self.conn.write(('$HX\n').encode('utf-8'))
 
@@ -66,5 +66,6 @@ class SerialController:
 
     def home_xya(self):
         self.conn.write(('$H\n').encode('utf-8'))
+
     def close(self):
         self.conn.close()

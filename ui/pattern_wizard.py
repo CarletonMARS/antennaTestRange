@@ -1,4 +1,3 @@
-
 import threading
 import csv
 
@@ -30,6 +29,13 @@ class PatternWizard(ctk.CTkToplevel):
         self.data = []
         self.alive = True
 
+        self.theta_step = None
+        self.phi_step = None
+        self.freq_stop = None
+        self.freq_points = None
+        self.freq_start = None
+        self.csv_path = None
+
         # for tracking pending after() callbacks
         self._after_ids = []
         self._orig_after = super().after
@@ -53,20 +59,55 @@ class PatternWizard(ctk.CTkToplevel):
         return aid
 
     def create_widgets(self):
-        self.label     = ctk.CTkLabel(self, text="Click 'Start Scan' to begin spherical scan")
+        self.params_frame = ctk.CTkFrame(self)
+        self.params_frame.pack(pady=5, fill="x", padx=10)
+
+        self.entries = {}
+
+        param_labels = [
+            ("Theta Step (°)", "theta_step"),
+            ("Phi Step (°)", "phi_step"),
+            ("Freq Start (GHz)", "freq_start"),
+            ("Freq Stop (GHz)", "freq_stop"),
+            ("Freq Points", "freq_step"),
+            ("CSV Path", "csv_path"),
+        ]
+
+        for idx, (label_text, var_name) in enumerate(param_labels):
+            label = ctk.CTkLabel(self.params_frame, text=label_text)
+            entry = ctk.CTkEntry(self.params_frame, width=100)
+            label.grid(row=0, column=idx, padx=2, sticky="w")
+            entry.grid(row=1, column=idx, padx=2)
+            self.entries[var_name] = entry
+
+        self.label = ctk.CTkLabel(self, text="Click 'Start Scan' to begin spherical scan")
         self.start_btn = ctk.CTkButton(self, text="Start Scan", command=self.start_scan_thread)
-        self.abort_btn = ctk.CTkButton(self, text="Abort",      command=self.abort_scan)
-        self.close_btn = ctk.CTkButton(self, text="Close",      command=self.handle_close)
+        self.abort_btn = ctk.CTkButton(self, text="Abort", command=self.abort_scan)
+        self.close_btn = ctk.CTkButton(self, text="Close", command=self.handle_close)
 
         for w in (self.label, self.start_btn, self.abort_btn, self.close_btn):
             w.pack(pady=5)
 
-        self.fig    = plt.figure(figsize=(5,4))
-        self.ax     = self.fig.add_subplot(111, projection='3d')
+        self.fig = plt.figure(figsize=(5, 4))
+        self.ax = self.fig.add_subplot(111, projection='3d')
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
 
     def start_scan_thread(self):
+        try:
+            self.theta_step = float(self.entries["theta_step"].get())
+            self.phi_step = float(self.entries["phi_step"].get())
+            self.freq_start = float(self.entries["freq_start"].get())
+            self.freq_stop = float(self.entries["freq_stop"].get())
+            self.freq_points = float(self.entries["freq_step"].get())
+            self.csv_path = self.entries["csv_path"].get().strip()
+        except ValueError:
+            self.label.configure(text="Invalid input: please check all fields.")
+            return
+        try:
+            self.freq_setup()
+        except RuntimeError as e:
+            self.label.configure(text=str(e))
         self.abort_flag.clear()
         self.start_btn.configure(state="disabled")
         self.label.configure(text="Scanning...")
@@ -104,15 +145,21 @@ class PatternWizard(ctk.CTkToplevel):
         except Exception:
             pass
 
-
     def run_scan(self):
-        theta_range = np.linspace(0, 360, 36)
-        phi_range   = np.linspace(0, 90, 10)
+        theta_range = np.arange(0, 360 + self.theta_step, self.theta_step)
+        theta_range = theta_range[theta_range <= 360]
 
-        for phi in phi_range:
-            if self.abort_flag.is_set(): break
-            for theta in theta_range:
-                if self.abort_flag.is_set(): break
+        phi_range = np.arange(0, 90 + self.phi_step, self.phi_step)
+        phi_range = phi_range[phi_range <= 90]
+
+        self.data.clear()
+
+        for theta in theta_range:
+            if self.abort_flag.is_set():
+                break
+            for phi in phi_range:
+                if self.abort_flag.is_set():
+                    break
 
                 try:
                     self.serial.move_to(theta, phi)
@@ -121,37 +168,40 @@ class PatternWizard(ctk.CTkToplevel):
                     return self.safe_gui_update(self.label, text=f"Positioner error: {e}")
 
                 try:
-                    _, mags = self.vna.read_trace()
-                    db_val = mags[0]
-                    self.data.append((theta, phi, db_val))
-                    self.update_3d_plot(theta, phi, db_val)
+                    freqs, mags = self.vna.read_trace()
+                    # Save full trace to CSV
+                    for f, m in zip(freqs, mags):
+                        self.data.append((theta, phi, f, m))
+
+                    # Use first frequency's magnitude for 3D plotting
+                    self.update_3d_plot(theta, phi, mags[0])
+                    self.save_csv(self.csv_path)
                 except Exception as e:
                     return self.safe_gui_update(self.label, text=f"VNA error: {e}")
 
-        # final status update
+        self.save_csv(self.csv_path)
         if not self.abort_flag.is_set():
-            self.save_csv()
             self.safe_gui_update(self.label, text="Scan complete. Results saved.")
         else:
             self.safe_gui_update(self.label, text="Scan aborted.")
         self.safe_gui_update(self.start_btn, state="normal")
 
-    def save_csv(self):
-        try:
-            with open("spherical_scan_results.csv", "w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(["Theta (deg)", "Phi (deg)", "Magnitude (dB)"])
-                writer.writerows(self.data)
-        except Exception as e:
-            self.safe_gui_update(self.label, text=f"CSV save error: {e}")
+    def save_csv(self, filename="scan_results.csv"):
+        import csv
+        with open(filename, mode="w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Theta (deg)", "Phi (deg)", "Frequency (GHz)", "Magnitude (dB)"])
+            for row in self.data:
+                writer.writerow(row)
 
     def update_3d_plot(self, theta, phi, db_val):
-        r     = 10**(db_val/20)
+        r = 10 ** (db_val / 20)
         theta_rad = np.radians(theta)
         phi_rad = np.radians(phi)
-        x = r * np.sin(phi_rad) * np.cos(theta_rad)
-        y = r * np.sin(phi_rad) * np.sin(theta_rad)
-        z = r * np.cos(phi_rad)
+
+        x = r * np.cos(phi_rad) * np.cos(theta_rad)
+        y = r * np.cos(phi_rad) * np.sin(theta_rad)
+        z = r * np.sin(phi_rad)
 
         def draw():
             if not self.winfo_exists(): return
@@ -169,7 +219,20 @@ class PatternWizard(ctk.CTkToplevel):
                 widget.configure(**kwargs)
             except Exception:
                 pass
+
         if self.alive:
             self.after(0, upd)
 
-    #TODO: ADD FREQUENCY EDITOR AND DATA ACQUISITION PARAMETERS BOXES
+    def freq_setup(self):
+        """Configures the VNA with frequency parameters using exact step size."""
+
+        num_points = int(self.freq_points)
+        try:
+            self.vna.write(f"STAR {self.freq_start}GHZ")
+            self.vna.write(f"STOP {self.freq_stop}GHZ")
+            self.vna.write(f"POIN {num_points}")
+            self.vna.write("OUTPLIML")
+
+
+        except Exception as e:
+            raise RuntimeError(f"VNA config error: {e}")

@@ -3,9 +3,10 @@ import customtkinter as ctk
 from interfaces.serial_interface import SerialController
 import settings
 
+
 class ManualControlWindow(ctk.CTkToplevel):
     def __init__(self, parent, serial_ctrl: SerialController):
-        self.connected=False
+        self.connected = False
         super().__init__(parent)
         self.ctrl = serial_ctrl
         self.attributes("-fullscreen", True)
@@ -23,15 +24,15 @@ class ManualControlWindow(ctk.CTkToplevel):
         self.ctk_image = ctk.CTkImage(light_image=image, size=(200, 200))
         self.label = ctk.CTkLabel(self, image=self.ctk_image, text="")
         self.label.grid(row=0, column=4, padx=10, pady=10)
-        #X -10
+        # X -10
         self.xminus10_button = ctk.CTkButton(self, text="X -10", command=self.xminus10)
         self.xminus10_button.grid(row=2, column=0, pady=10, padx=10)
 
-        #X -1
+        # X -1
         self.xminus1_button = ctk.CTkButton(self, text="X -1", command=self.xminus1)
         self.xminus1_button.grid(row=2, column=1, pady=10, padx=10)
 
-        #X -0.1
+        # X -0.1
         self.xminus0p1_button = ctk.CTkButton(self, text="X -0.1", command=self.xminus0p1)
         self.xminus0p1_button.grid(row=2, column=2, pady=10, padx=10)
 
@@ -55,8 +56,7 @@ class ManualControlWindow(ctk.CTkToplevel):
         self.xplus0p02_button = ctk.CTkButton(self, text="X +0.02", command=self.xplus0p02)
         self.xplus0p02_button.grid(row=2, column=5, pady=10, padx=10)
 
-##################################################################################################
-
+        ##################################################################################################
 
         # Y -10
         self.yminus10_button = ctk.CTkButton(self, text="Y -10", command=self.yminus10)
@@ -90,7 +90,7 @@ class ManualControlWindow(ctk.CTkToplevel):
         self.yplus0p02_button = ctk.CTkButton(self, text="Y +0.02", command=self.yplus0p02)
         self.yplus0p02_button.grid(row=3, column=5, pady=10, padx=10)
 
-        #Home X
+        # Home X
         self.HomeX_button = ctk.CTkButton(self, text="HomeX", command=self.homex)
         self.HomeX_button.grid(row=4, column=1, pady=10, padx=10)
 
@@ -106,21 +106,21 @@ class ManualControlWindow(ctk.CTkToplevel):
         self.HomeALL_button = ctk.CTkButton(self, text="Home All", command=self.home)
         self.HomeALL_button.grid(row=4, column=4, pady=10, padx=10)
 
-        #Goto 000
+        # Goto 000
         self.goto0_button = ctk.CTkButton(self, text="GOTO 0,0,0", command=self.goto0)
         self.goto0_button.grid(row=4, column=7, pady=10, padx=10)
 
-        #Close
+        # Close
         self.close_button = ctk.CTkButton(self, text='CLOSE', command=self.close)
         self.close_button.grid(row=6, column=4, padx=1, pady=1)
 
-        #TEXTBOX
+        # TEXTBOX
         self.textbox = ctk.CTkTextbox(self, height=100, width=1500, wrap="word")
         self.textbox.grid(row=5, column=4, padx=10, pady=10)
 
     def connect_to_controller(self):
         try:
-            x,y,z,a,b,c = self.ctrl.query_position()
+            x, y, z, a, b, c = self.ctrl.query_position()
             self.update_textbox(f"Connected. Position at connection time is X{x} Y{y} A{a}\n")
             self.connected = True
         except Exception as e:
@@ -132,44 +132,40 @@ class ManualControlWindow(ctk.CTkToplevel):
         self.textbox.insert("end", text)  # Insert new text
 
     def xminus10(self):
-        self.move_and_refresh(-10,0)
+        self.move_and_refresh(-10, 0)
 
     def xminus1(self):
-        self.move_and_refresh(-1,0)
+        self.move_and_refresh(-1, 0)
 
     def xminus0p1(self):
-        self.move_and_refresh(-0.1,0)
+        self.move_and_refresh(-0.1, 0)
 
     def xminus0p02(self):
-        self.move_and_refresh(-0.02,0)
-
+        self.move_and_refresh(-0.02, 0)
 
     def xplus0p02(self):
-        self.move_and_refresh(0.02,0)
-
+        self.move_and_refresh(0.02, 0)
 
     def xplus0p1(self):
-        self.move_and_refresh(0.1,0)
+        self.move_and_refresh(0.1, 0)
 
     def xplus1(self):
-        self.move_and_refresh(1,0)
+        self.move_and_refresh(1, 0)
 
     def xplus10(self):
-        self.move_and_refresh(10,0)
-
+        self.move_and_refresh(10, 0)
 
     def yminus10(self):
-        self.move_and_refresh(0,-10)
-
+        self.move_and_refresh(0, -10)
 
     def yminus1(self):
-        self.move_and_refresh(0,-1)
+        self.move_and_refresh(0, -1)
 
     def yminus0p1(self):
-        self.move_and_refresh(0,-0.1)
+        self.move_and_refresh(0, -0.1)
 
     def yminus0p02(self):
-        self.move_and_refresh(0,-0.02)
+        self.move_and_refresh(0, -0.02)
 
     def yplus0p02(self):
         self.move_and_refresh(0, 0.02)
@@ -231,7 +227,6 @@ class ManualControlWindow(ctk.CTkToplevel):
 
         self.ctrl.move_to(0, 0)
         self.refresh()
-
 
     def close(self):
 

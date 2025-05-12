@@ -2,6 +2,7 @@ import pyvisa
 import time
 import numpy as np
 
+
 class VNAController:
     def __init__(self, resource_str: str):
         self.resource_str = resource_str
@@ -32,13 +33,13 @@ class VNAController:
         """select S11, S21, etc."""
         self.write(sparam)
 
-    def read_trace(self, channel: str =  "CHAN1") -> (np.ndarray, np.ndarray):
+    def read_trace(self, channel: str = "CHAN1") -> (np.ndarray, np.ndarray):
         """Returns (freq_GHz, mag_dB) arrays
             Defaults Channel 1 Readings,
             Assumes OUTPLIML, FORM5, OUTPFORM
         """
 
-        #frequency axis
+        # frequency axis
         self.write("OUTPLIML")
         raw = self.VNA.read().splitlines()
         freqs = np.array([float(line.split(',')[0]) for line in raw if line])
@@ -49,7 +50,7 @@ class VNAController:
         vals = self.VNA.query_binary_values("OUTPFORM;", container=list, header_fmt="hp")
 
         mags = np.array(vals[0::2])
-        return freqs/1e9, mags
+        return freqs / 1e9, mags
 
     def reset(self):
         """Full reset VNA"""
